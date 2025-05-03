@@ -20,26 +20,26 @@ jobs:
           verbose: true
           verify_ssl: false
 
-  # discord-message:
-  #   runs-on: ubuntu-latest
-  #   # Run this job whether call-webhooks succeeds or fails
-  #   needs: call-webhooks
-  #   if: always()
-  #   steps:
-  #     - name: Send Success Message
-  #       if: needs.call-webhooks.result == 'success'
-  #       uses: appleboy/discord-action@v1.2.0
-  #       with:
-  #         webhook_id: ${{ secrets.DISCORD_GITHUB_SUCCESS_WEBHOOK_ID }}
-  #         webhook_token: ${{ secrets.DISCORD_GITHUB_SUCCESS_WEBHOOK_TOKEN }}
-  #         color: "#48f442"
-  #         message: "🚀 **${{ github.workflow }}** triggered by *${{ github.actor }}* finished successfully. "
+  discord-message:
+    runs-on: ubuntu-latest
+    # Run this job whether call-webhooks succeeds or fails
+    needs: call-webhooks
+    if: always()
+    steps:
+      - name: Send Success Message
+        if: needs.call-webhooks.result == 'success'
+        uses: appleboy/discord-action@v1.2.0
+        with:
+          webhook_id: ${{ secrets.DISCORD_GITHUB_SUCCESS_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_GITHUB_SUCCESS_WEBHOOK_TOKEN }}
+          color: "#48f442"
+          message: "🚀 **${{ github.workflow }}** triggered by *${{ github.actor }}* finished successfully. "
 
-  #     - name: Send Failure Message
-  #       if: needs.call-webhooks.result == 'failure'
-  #       uses: appleboy/discord-action@v1.2.0
-  #       with:
-  #         webhook_id: ${{ secrets.DISCORD_GITHUB_FAILURE_WEBHOOK_ID }}
-  #         webhook_token: ${{ secrets.DISCORD_GITHUB_FAILURE_WEBHOOK_TOKEN }}
-  #         color: "#ff0000"
-  #         message: "🚨 **${{ github.workflow }}** triggered by *${{ github.actor }}* failed. ❌"
+      - name: Send Failure Message
+        if: needs.call-webhooks.result == 'failure'
+        uses: appleboy/discord-action@v1.2.0
+        with:
+          webhook_id: ${{ secrets.DISCORD_GITHUB_FAILURE_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_GITHUB_FAILURE_WEBHOOK_TOKEN }}
+          color: "#ff0000"
+          message: "🚨 **${{ github.workflow }}** triggered by *${{ github.actor }}* failed. ❌"
