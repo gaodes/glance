@@ -1,0 +1,24 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync fork with upstream repository
+        # Update to the latest version
+        uses: tgymnich/fork-sync@v2.0.10 
+        with:
+          # Upstream repository owner and name
+          owner: glanceapp
+          repo: glance
+          # Use 'token' instead of 'github_token'
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
+          # Use 'base' for the branch in your fork (gaodes/glance) to update
+          base: dev
+          # Use 'head' for the branch in the upstream repo (glanceapp/glance) to sync from
+          head: dev # Sync from upstream dev branch
