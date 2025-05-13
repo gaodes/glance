@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 )
 
 var (
@@ -25,9 +26,11 @@ func (a *application) handleThemeChangeRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:  "theme",
-		Value: themeKey,
-		Path:  a.Config.Server.BaseURL + "/",
+		Name:     "theme",
+		Value:    themeKey,
+		Path:     a.Config.Server.BaseURL + "/",
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(2 * 365 * 24 * time.Hour),
 	})
 
 	w.Header().Set("Content-Type", "text/css")

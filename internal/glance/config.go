@@ -2,6 +2,7 @@ package glance
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"iter"
@@ -30,9 +31,15 @@ type config struct {
 	Server struct {
 		Host       string `yaml:"host"`
 		Port       uint16 `yaml:"port"`
+		Proxied    bool   `yaml:"proxied"`
 		AssetsPath string `yaml:"assets-path"`
 		BaseURL    string `yaml:"base-url"`
 	} `yaml:"server"`
+
+	Auth struct {
+		SecretKey string           `yaml:"secret-key"`
+		Users     map[string]*user `yaml:"users"`
+	} `yaml:"auth"`
 
 	Document struct {
 		Head template.HTML `yaml:"head"`
@@ -50,6 +57,7 @@ type config struct {
 		LogoText           string        `yaml:"logo-text"`
 		LogoURL            string        `yaml:"logo-url"`
 		FaviconURL         string        `yaml:"favicon-url"`
+		FaviconType        string        `yaml:"-"`
 		AppName            string        `yaml:"app-name"`
 		AppIconURL         string        `yaml:"app-icon-url"`
 		AppBackgroundColor string        `yaml:"app-background-color"`
@@ -58,14 +66,21 @@ type config struct {
 	Pages []page `yaml:"pages"`
 }
 
+type user struct {
+	Password           string `yaml:"password"`
+	PasswordHashString string `yaml:"password-hash"`
+	PasswordHash       []byte `yaml:"-"`
+}
+
 type page struct {
-	Title                  string `yaml:"name"`
-	Slug                   string `yaml:"slug"`
-	Width                  string `yaml:"width"`
-	DesktopNavigationWidth string `yaml:"desktop-navigation-width"`
-	ShowMobileHeader       bool   `yaml:"show-mobile-header"`
-	HideDesktopNavigation  bool   `yaml:"hide-desktop-navigation"`
-	CenterVertically       bool   `yaml:"center-vertically"`
+	Title                  string  `yaml:"name"`
+	Slug                   string  `yaml:"slug"`
+	Width                  string  `yaml:"width"`
+	DesktopNavigationWidth string  `yaml:"desktop-navigation-width"`
+	ShowMobileHeader       bool    `yaml:"show-mobile-header"`
+	HideDesktopNavigation  bool    `yaml:"hide-desktop-navigation"`
+	CenterVertically       bool    `yaml:"center-vertically"`
+	HeadWidgets            widgets `yaml:"head-widgets"`
 	Columns                []struct {
 		Size    string  `yaml:"size"`
 		Widgets widgets `yaml:"widgets"`
@@ -93,6 +108,12 @@ func newConfigFromYAML(contents []byte) (*config, error) {
 	}
 
 	for p := range config.Pages {
+		for w := range config.Pages[p].HeadWidgets {
+			if err := config.Pages[p].HeadWidgets[w].initialize(); err != nil {
+				return nil, formatWidgetInitError(err, config.Pages[p].HeadWidgets[w])
+			}
+		}
+
 		for c := range config.Pages[p].Columns {
 			for w := range config.Pages[p].Columns[c].Widgets {
 				if err := config.Pages[p].Columns[c].Widgets[w].initialize(); err != nil {
@@ -421,9 +442,37 @@ func configFilesWatcher(
 	}, nil
 }
 
+// TODO: Refactor, we currently validate in two different places, this being
+// one of them, which doesn't modify the data and only checks for logical errors
+// and then again when creating the application which does modify the data and do
+// further validation. Would be better if validation was done in a single place.
 func isConfigStateValid(config *config) error {
 	if len(config.Pages) == 0 {
 		return fmt.Errorf("no pages configured")
+	}
+
+	if len(config.Auth.Users) > 0 && config.Auth.SecretKey == "" {
+		return fmt.Errorf("secret-key must be set when users are configured")
+	}
+
+	for username := range config.Auth.Users {
+		if username == "" {
+			return fmt.Errorf("user has no name")
+		}
+
+		if len(username) < 3 {
+			return errors.New("usernames must be at least 3 characters")
+		}
+
+		user := config.Auth.Users[username]
+
+		if user.Password == "" {
+			if user.PasswordHashString == "" {
+				return fmt.Errorf("user %s must have a password or a password-hash set", username)
+			}
+		} else if len(user.Password) < 6 {
+			return fmt.Errorf("the password for %s must be at least 6 characters", username)
+		}
 	}
 
 	if config.Server.AssetsPath != "" {
