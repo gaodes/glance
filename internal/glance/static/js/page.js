@@ -661,7 +661,8 @@ function setupTruncatedElementTitles() {
 
     for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
-        if (element.getAttribute("title") === null) element.title = element.innerText;
+        if (element.getAttribute("title") === null)
+            element.title = element.innerText.trim().replace(/\s{2,}/, " ");
     }
 }
 
@@ -683,17 +684,21 @@ async function changeTheme(key, onChanged) {
         .appendTo(document.head);
 
     themeStyleElem.html(newThemeStyle);
+    document.documentElement.setAttribute("data-theme", key);
     document.documentElement.setAttribute("data-scheme", response.headers.get("X-Scheme"));
     typeof onChanged == "function" && onChanged();
     setTimeout(() => { tempStyle.remove(); }, 10);
 }
 
-function initThemeSwitcher() {
+function initThemePicker() {
+    const themeChoicesInMobileNav = find(".mobile-navigation .theme-choices");
+    if (!themeChoicesInMobileNav) return;
+
     const themeChoicesInHeader = find(".header-container .theme-choices");
 
     if (themeChoicesInHeader) {
         themeChoicesInHeader.replaceWith(
-            find(".mobile-navigation .theme-choices").cloneNode(true)
+            themeChoicesInMobileNav.cloneNode(true)
         );
     }
 
@@ -738,7 +743,7 @@ function initThemeSwitcher() {
 }
 
 async function setupPage() {
-    initThemeSwitcher();
+    initThemePicker();
 
     const pageElement = document.getElementById("page");
     const pageContentElement = document.getElementById("page-content");
